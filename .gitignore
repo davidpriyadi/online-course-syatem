@@ -36,7 +36,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
-postgres-course
-postgres-user
-postgres-payment
-redis
+postgres-course/
+postgres-user/
+postgres-payment/
+redis/
