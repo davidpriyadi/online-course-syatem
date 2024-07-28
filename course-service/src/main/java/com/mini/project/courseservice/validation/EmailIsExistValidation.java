@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 public class EmailIsExistValidation implements ConstraintValidator<EmailIsExist, String> {
 
     private final MentorsRepository mentorsRepository;
+
     @Override
     public boolean isValid(String email, ConstraintValidatorContext constraintValidatorContext) {
         return !mentorsRepository.existsUsersByEmail(email);
