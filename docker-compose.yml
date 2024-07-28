@@ -1,0 +1,169 @@
+version: '3'
+services:
+  postgres-user:
+    image: postgres
+    container_name: postgres-user
+    environment:
+      POSTGRES_USER: user-db
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: user-db
+      PGDATA: /data/postgres
+    expose:
+      - "5433"
+    ports:
+      - "5433:5433"
+    volumes:
+      - ./postgres-user:/data/postgres
+    networks:
+      - microservices-network
+    command: -p 5433
+    restart: unless-stopped
+
+  postgres-course:
+    image: postgres
+    container_name: postgres-course
+    environment:
+      POSTGRES_USER: course-db
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: course-db
+      PGDATA: /data/postgres
+    expose:
+      - "5434"
+    ports:
+      - "5434:5434"
+    volumes:
+      - ./postgres-course:/data/postgres
+    networks:
+      - microservices-network
+    command: -p 5434
+    restart: unless-stopped
+
+  redis:
+    image: redis
+    container_name: redis
+    expose:
+      - "6379"
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data/redis
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres-payment:
+    image: postgres
+    container_name: postgres-payment
+    environment:
+      POSTGRES_USER: payment-db
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: payment-db
+      PGDATA: /data/postgres
+    expose:
+      - "5435"
+    ports:
+      - "5435:5435"
+    volumes:
+      - ./postgres-payment:/data/postgres
+    networks:
+      - microservices-network
+    command: -p 5435
+    restart: unless-stopped
+
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    networks:
+      - microservices-network
+    depends_on:
+      - config-server
+      - eureka-service
+      - user-service
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-service:8761/eureka/
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    ports:
+      - "8887:8887"
+    networks:
+      - microservices-network
+    depends_on:
+      - postgres-user
+      - config-server
+      - eureka-service
+      - redis
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-service:8761/eureka/
+    restart: unless-stopped
+
+  course-service:
+    build:
+      context: ./course-service
+      dockerfile: Dockerfile
+    ports:
+      - "8886:8886"
+    networks:
+      - microservices-network
+    depends_on:
+      - postgres-course
+      - config-server
+      - eureka-service
+      - user-service
+      - redis
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-service:8761/eureka/
+    restart: unless-stopped
+
+  order-payment-service:
+    build:
+      context: ./order-payment-service
+      dockerfile: Dockerfile
+    ports:
+      - "8885:8885"
+    networks:
+      - microservices-network
+    depends_on:
+      - postgres-payment
+      - config-server
+      - eureka-service
+      - user-service
+      - course-service
+      - redis
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-service:8761/eureka/
+    restart: unless-stopped
+
+
+  eureka-service:
+    build:
+      context: ./eureka-service
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+    networks:
+      - microservices-network
+    depends_on:
+      - config-server
+    restart: unless-stopped
+
+
+networks:
+  microservices-network:
+    driver: bridge
